@@ -39,6 +39,78 @@ Notation "x → y" := (implS x y) (at level 51).
 Notation "∀ x , y" := (forallS x y) (at level 51).
 Notation "∃ x , y" := (existsS x y) (at level 51).
 
+
+(* Syntactic comparison and eqType for Fml.                                *)
+
+Fixpoint eqFml F G {struct F} :=
+  match F, G with
+    | equalityS m0 m1, equalityS n0 n1 => (m0 == n0) && (m1 == n1)
+    | membershipS m0 m1, membershipS n0 n1 => (m0 == n0) && (m1 == n1)
+    | notS F0, notS G0 => eqFml F0 G0
+    | orS F0 F1, orS G0 G1 => eqFml F0 G0 && eqFml F1 G1
+    | andS F0 F1, andS G0 G1 => eqFml F0 G0 && eqFml F1 G1
+    | implS F0 F1, implS G0 G1 => eqFml F0 G0 && eqFml F1 G1
+    | forallS m F0, forallS n G0 => (m == n) && eqFml F0 G0
+    | existsS m F0, existsS n G0 => (m == n) && eqFml F0 G0
+    | _, _ => false
+  end.
+
+Fixpoint eqFmlP_aux F G {struct F} : eqFml F G -> F = G.
+Proof.
+  case: F; case: G => //=.
+  - move=> v v0 v1 v2 /andP H.
+    by elim: H => /eqP => -> /eqP ->.
+  - move=> v v0 v1 v2 /andP H.
+    by elim: H => /eqP -> /eqP ->.
+  - move=> f f0.
+    by move/eqFmlP_aux ->.
+  - move=> f f0 f1 f2 /andP; elim.
+    by move => /eqFmlP_aux -> /eqFmlP_aux ->.
+  - move=> f f0 f1 f2 /andP; elim.
+    by move => /eqFmlP_aux -> /eqFmlP_aux ->.
+  - move=> f f0 f1 f2 /andP; elim.
+    by move => /eqFmlP_aux -> /eqFmlP_aux ->.
+  - move=> v f v0 f0 /andP; elim.
+    by move => /eqP -> /eqFmlP_aux ->.
+  - move=> v f v0 f0 /andP; elim.
+    by move => /eqP -> /eqFmlP_aux ->.
+Qed.
+
+Lemma eqFmlP : Equality.axiom eqFml.
+Proof.
+  move=> F G.
+  apply (iffP idP); last first; [move => -> //| ].
+  - elim: G => //.
+    + move=> v v0 /=.
+      by apply/andP.
+    + move=> v v0 /=.
+      by apply/andP.
+    + move=> f H f0 H0 => /=.
+      by apply/andP.
+    + move=> f H f0 H0 => /=.
+      by apply/andP.
+    + move=> f H f0 H0 => /=.
+      by apply/andP.
+    + move=> v f H => /=.
+      by apply/andP.
+    + move=> v f H => /=.
+      by apply/andP.
+  - by apply eqFmlP_aux.
+Qed.
+
+Canonical Fml_eqMixin := EqMixin eqFmlP.
+Canonical Fml_eqType := Eval hnf in EqType Fml Fml_eqMixin.
+
+Implicit Arguments eqFmlP [x y].
+Prenex Implicits eqFmlP.
+
+Lemma eqFmlE : eqFml = eq_op. Proof. by []. Qed.
+
+Lemma Fml_irrelevance (F G : nat) (E E' : F = G) : E = E'.
+Proof. exact: eq_irrelevance. Qed.
+
+(* eqType準備ここまで *)
+
 Definition X : Fml := 0 _=_ 0 ∧ 1 _=_ 1.
 
 Definition is_atomic (f : Fml) : bool :=
