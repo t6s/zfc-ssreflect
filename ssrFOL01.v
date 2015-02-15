@@ -55,27 +55,6 @@ Fixpoint eqFml F G {struct F} :=
     | _, _ => false
   end.
 
-Fixpoint eqFmlP_aux F G {struct F} : eqFml F G -> F = G.
-Proof.
-  case: F; case: G => //=.
-  - move=> v v0 v1 v2 /andP H.
-    by elim: H => /eqP => -> /eqP ->.
-  - move=> v v0 v1 v2 /andP H.
-    by elim: H => /eqP -> /eqP ->.
-  - move=> f f0.
-    by move/eqFmlP_aux ->.
-  - move=> f f0 f1 f2 /andP; elim.
-    by move => /eqFmlP_aux -> /eqFmlP_aux ->.
-  - move=> f f0 f1 f2 /andP; elim.
-    by move => /eqFmlP_aux -> /eqFmlP_aux ->.
-  - move=> f f0 f1 f2 /andP; elim.
-    by move => /eqFmlP_aux -> /eqFmlP_aux ->.
-  - move=> v f v0 f0 /andP; elim.
-    by move => /eqP -> /eqFmlP_aux ->.
-  - move=> v f v0 f0 /andP; elim.
-    by move => /eqP -> /eqFmlP_aux ->.
-Qed.
-
 Lemma eqFmlP : Equality.axiom eqFml.
 Proof.
   move=> F G.
@@ -95,7 +74,24 @@ Proof.
       by apply/andP.
     + move=> v f H => /=.
       by apply/andP.
-  - by apply eqFmlP_aux.
+
+  - move: G; elim F.
+    + move=> v v0; case => v1 v2 //=.
+      by move/andP; elim => /eqP -> /eqP ->.
+    + move=> v v0; case => v1 v2 //=.
+      by move/andP; elim => /eqP -> /eqP ->.
+    + move=> f H; case => f0 //=.
+      by move/H => ->.
+    + move=> f H f0 H0; case => f1 f2 //=.
+      by move/andP; elim => /H -> /H0 ->.
+    + move=> f H f0 H0; case => f1 f2 //=.
+      by move/andP; elim => /H -> /H0 ->.
+    + move=> f H f0 H0; case => f1 f2 //=.
+      by move/andP; elim => /H -> /H0 ->.
+    + move=> v f H; case => v0 f0 //=.
+      by move/andP; elim => /eqP -> /H ->.
+    + move=> v f H; case => v0 f0 //=.
+      by move/andP; elim => /eqP -> /H ->.
 Qed.
 
 Canonical Fml_eqMixin := EqMixin eqFmlP.
