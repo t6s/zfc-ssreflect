@@ -39,6 +39,17 @@ Notation "x → y" := (implS x y) (at level 51).
 Notation "∀ x , y" := (forallS x y) (at level 51).
 Notation "∃ x , y" := (existsS x y) (at level 51).
 
+Definition allFml (p : Fml -> bool) f :=
+  match f with
+    | notS f1 => p f1
+    | orS f1 f2 => p f1 && p f2
+    | andS f1 f2 => p f1 && p f2
+    | implS f1 f2 => p f1 && p f2
+    | forallS x f1 => p f1
+    | existsS x f1 => p f1
+    | _ => true
+  end.
+                           
 
 (* Syntactic comparison and eqType for Fml.                                *)
 
@@ -59,8 +70,8 @@ Lemma eqFmlP : Equality.axiom eqFml.
 Proof.
   move=> F G.
   apply (iffP idP); last first; [move => -> //| ].
-  - elim: G => //.
-    + move=> v v0 /=.
+  - elim: G => //; move=>*; by apply/andP.
+(*    + move=> v v0 /=.
       by apply/andP.
     + move=> v v0 /=.
       by apply/andP.
@@ -73,10 +84,15 @@ Proof.
     + move=> v f H => /=.
       by apply/andP.
     + move=> v f H => /=.
-      by apply/andP.
+      by apply/andP.*)
 
-  - move: G; elim F.
-    + move=> v v0; case => v1 v2 //=.
+  - move: G; elim F; (move=> f H f0 H0 G E || move=> v f H G E || move => v v0 G E); move: G E;
+    solve [ case=> v1 v2 //= /andP [] /eqP -> /eqP -> //
+          | case=> f // /v0 -> //
+          | case=> f1 f2 //= /andP [] /H -> /H0 -> //
+          | case=> v0 f0 //= /andP [] /eqP -> /H -> //].
+    (*case=> ? ? //= /andP; solve [elim=> /eqP -> /eqP -> // | elim=> /H -> /H0 -> // | elim=> /eqP -> /H -> //]*)
+(*    + move=> v v0; case => v1 v2 //=.
       by move/andP; elim => /eqP -> /eqP ->.
     + move=> v v0; case => v1 v2 //=.
       by move/andP; elim => /eqP -> /eqP ->.
@@ -91,8 +107,28 @@ Proof.
     + move=> v f H; case => v0 f0 //=.
       by move/andP; elim => /eqP -> /H ->.
     + move=> v f H; case => v0 f0 //=.
-      by move/andP; elim => /eqP -> /H ->.
+      by move/andP; elim => /eqP -> /H ->.*)
 Qed.
+
+(* See: *)
+(*  Handbook of Practical Logic, 6.6 Proving tautologies by inference *)
+(*  coq-8.4pl5/tactics/tauto.ml4 *)
+
+(* propositional tautology *)
+Fixpoint tautoFml F G {struct F} :=
+  match F, G with
+    | equalityS m0 m1, equalityS n0 n1 => (m0 == n0) && (m1 == n1)
+    | membershipS m0 m1, membershipS n0 n1 => (m0 == n0) && (m1 == n1)
+    | notS F0, notS G0 => eqFml F0 G0
+    | orS F0 F1, orS G0 G1 => eqFml F0 G0 && eqFml F1 G1
+    | andS F0 F1, andS G0 G1 => eqFml F0 G0 && eqFml F1 G1
+    | implS F0 F1, implS G0 G1 => eqFml F0 G0 && eqFml F1 G1
+    | forallS m F0, forallS n G0 => (m == n) && eqFml F0 G0
+    | existsS m F0, existsS n G0 => (m == n) && eqFml F0 G0
+    | _, _ => false
+  end.
+
+
 
 Canonical Fml_eqMixin := EqMixin eqFmlP.
 Canonical Fml_eqType := Eval hnf in EqType Fml Fml_eqMixin.
@@ -157,6 +193,13 @@ Definition is_not_qf (f : Fml) : bool :=
    | forallS x f0 => false
    | existsS x f0 => false
    | _ => true
+  end.
+
+Fixpoint is_quantifier_free (f : Fml) : bool :=
+  match f with
+    | forallS _ _ => false
+    | existsS _ _ => false
+    | _ => allFml is_quantifier_free f
   end.
 
 Fixpoint is_quantifier_free (f : Fml) : bool :=
